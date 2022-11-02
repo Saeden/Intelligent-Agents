@@ -8,20 +8,101 @@ from owlready2 import *
 owlready2.JAVA_EXE = "C:\\Program Files (x86)\\Java\\jre1.8.0_351\\bin\\java.exe"
 owlready2.reasoning.JAVA_MEMORY = 1000
 
-#onto_path.append("Ontology_Intelligent_Agents_Group8.owl")
+#onto_path.append("Ontology_IA_Group8Final_TEST.owl")
 
-onto = get_ontology("file://Ontology_Intelligent_Agents_T-1.owl").load()
+"""onto_before = get_ontology("file://Ontology_IA_Group8Final_TEST.owl").load()
+
+with onto_before:
+    #close_world(onto)
+    sync_reasoner()
+    
+onto_before.save(file = "Ontology_IA_Group8Final_TEST.owl", format = "rdfxml")"""
+
+
+
+
+onto = get_ontology("file://Ontology_IA_Group8Final.owl").load()
 
 with onto:
-    sync_reasoner()
+    sync_reasoner(infer_property_values=True)
+    close_world(onto)
+    
 
 def main():
-    print("---Welcome to the IA Ontological Reasoner---\n")
-    #print("Select a query: ")
-    agent()
+    """print("\n\n---Welcome to the IA Ontological Reasoner---\n")
+    print("What question would you like to ask?")
+    print("1. Are soccer and kickboxing unsafe sports?")
 
-def agent(query=""):
-    return
+    selected = False
+    query_options = ["1", "2", "3"]
+    while (selected == False):
+        query = input("Select a query: ")
+        if (query in query_options): selected = True
+        else: 
+            print("That is not one of the options, please try again")
+    agent(query)"""
+    print("\n\n")
+    query1()
+
+def agent(query):
+    if (query == "1"):
+        query1()
+
+    elif (query == "2"):
+        query2()
+
+    elif (query == "3"):
+        query3()
+
+def searchFound(search_result, search_term):
+    if search_result is not []: 
+        print(f"{search_term} in in the ontology as: {search_result}")
+    else:
+        print(f"{search_term} is not in the ontology...\nQuerying Twitter for answers...")
+        #query_twitter(["Soccer", "Kickboxing", "Unsafe", "Sport"])
+
+def memberOf(instance, ont_class):
+    search = onto.search(is_a = ont_class)
+    print(f"Individual: {instance}")
+    print(f"Class and its individuals: {search}")
+    if (instance[0] in search):
+        return True
+    else:
+        return False
+
+
+def query1():
+    print("\nQuerying if UnsafeSport is in the ontology:")
+    unsafe_InO = onto.search(iri = "*UnsafeSport")
+    searchFound(unsafe_InO, "UnsafeSport")
+    
+
+    print("\nQuerying if soccer is in the ontology:")
+    soccer_InO = onto.search(iri = "*soccer")
+    searchFound(soccer_InO, "Soccer")
+
+    print("\nQuerying if kickboxing is in the ontology:")
+    kickbox_InO = onto.search(iri = "*kickboxing")
+    searchFound(kickbox_InO, "Kickboxing")
+
+    print("\nChecking if soccer is a member of UnsafeSport:")
+    is_in_soc = memberOf(soccer_InO, unsafe_InO)
+    print(f"Indivual is in class: {is_in_soc}")
+
+    print("\nChecking if kickboxing is a member of UnsafeSport:")
+    is_in_kic = memberOf(kickbox_InO, unsafe_InO)
+    print(f"Indivual is in class: {is_in_kic}")
+
+    print(f"\nFinal answer: \nSoccer is unsafe is {is_in_soc} and kickboxing is unsafe is {is_in_kic}")
+
+
+
+
+def query2():
+    print("Not implemented yet...")
+
+def query3():
+    print("Not implemented yet...")
 
 def twitter(query=""):
     # Optional params: start_time,end_time,since_id,until_id,max_results,next_token,
