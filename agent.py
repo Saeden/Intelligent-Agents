@@ -5,7 +5,7 @@ from owlready2 import *
 import json
 
 
-#owlready2.JAVA_EXE = "C:\\Program Files (x86)\\Java\\jre1.8.0_351\\bin\\java.exe"
+owlready2.JAVA_EXE = "C:\\Program Files (x86)\\Java\\jre1.8.0_351\\bin\\java.exe"
 owlready2.reasoning.JAVA_MEMORY = 1000
 
 
@@ -26,12 +26,11 @@ with open('BEARER_TOKEN.txt') as f:
 def main():
     print("\n\n---Welcome to the IA Ontological Reasoner---\n")
     print("What question would you like to ask?")
-    #print("1. Are soccer and kickboxing unsafe sports?")
-    #print("2. Is there a sport that is a riskfactor for a health condition?")
+
 
     selected = False
-    keywords = [["unsafe"], ["risk", "riskfactor"], ["patents", "monopoly", "monopolized"]]
-    #query_options = ["1", "2", "3"]
+    keywords = [["unsafe"], ["risk", "riskfactor"], ["monopoly", "big pharma"]]
+
     finished = False
     done_query = False
     query_type = ''
@@ -47,7 +46,7 @@ def main():
                 print("Sorry but I don't recognise that question, please try again.")
         
         if not done_query:
-            agent(query_type)
+            agent(query_type, keywords[int(query_type)-1])
             done_query = True
 
         yes_no = input("\n\nDo you want to ask another question? (y/n):")
@@ -60,27 +59,28 @@ def main():
         else:
             print("That is not one of the options, please try again.")
 
-    print(twitter_query())
-    #print("\n\n")
-    #query2()
 
-def agent(query):
+def agent(query: str, keywords: list):
     if (query == "1"):
         check = query1()
         if not check:
-            #print("No result from onto")
-            twitter_query()
+            twitter_query(keywords)
+        else:
+            print("This query is consistent with our knowledge so is NOT fake news")
 
     elif (query == "2"):
         check = query2()
         if not check:
-            print("No result from onto")
-            #twitter()
+            twitter_query(keywords)
+        else:
+            print("This query is consistent with our knowledge so is NOT fake news")
 
     elif (query == "3"):
         check = query3()
         if not check:
-            twitter_query()
+            twitter_query(keywords)
+        else:
+            print("This query is consistent with our knowledge so is NOT fake news")
 
 
 def search(search_iri, search_term):
@@ -186,7 +186,18 @@ def query2():
     return True
 
 def query3():
-    print("Not implemented yet...")
+    importantTreatmentOF_InO = search("*isImportantForTreatmentOf", "isImportantForTreatmentOf")
+    if importantTreatmentOF_InO == []: return False
+
+    print(f"To quantify from {importantTreatmentOF_InO[0].name} it must not be a composite property.")
+    print("Checking to see if this is the case")
+    complex_Treatment = importantTreatmentOF_InO[0].get_property_chain()
+    if complex_Treatment != []:
+        print("Warning: This is a composite property, thus the ontology cannot answer the query...")
+        return False
+
+
+
 
 
 
@@ -194,38 +205,83 @@ def query3():
 #https://github.com/twitterdev/Twitter-API-v2-sample-code/blob/main/Full-Archive-Search/full-archive-search.py
 #https://github.com/twitterdev/Twitter-API-v2-sample-code/blob/main/Recent-Search/recent_search.py
 
-def twitter_query(query: str = ""):
+def twitter_query(query: list):
     print("The ontology could not provide an answer, querying Twitter for more up to date info...")
+
+
+    print("Searching twitter for some keywords and hashtags")
+
+    keywords = ""
+    keytags = ""
+    for x in query:
+        keywords += x+' '
+        keytags += '#'+x+" OR "
+
+    keytags = keytags[:-4]
 
     search_url = "https://api.twitter.com/2/tweets/search/recent"
     #search_url = "https://api.twitter.com/2/tweets/search/all"
 
     # Optional params: start_time,end_time,since_id,until_id,max_results,next_token,
     # expansions,tweet.fields,media.fields,poll.fields,place.fields,user.fields
-    query_params = {'query': '#sport OR #competition OR #eating','tweet.fields': 'author_id', 'max_results': 10, 'expansions': 'author_id', 'user.fields': 'public_metrics'}
+    query_params_words = {'query': keywords,'tweet.fields': 'author_id', 'max_results': 100, 'expansions': 'author_id', 'user.fields': 'public_metrics'}
+    query_params_hashtags = {'query': keytags,'tweet.fields': 'author_id', 'max_results': 100, 'expansions': 'author_id', 'user.fields': 'public_metrics'}
 
 
     
-    json_response = connect_to_endpoint(search_url, query_params)
+    json_response_words = connect_to_endpoint(search_url, query_params_words)
+    json_response_tags = connect_to_endpoint(search_url, query_params_hashtags)
     #print(json.dumps(json_response, indent=4, sort_keys=True))
 
+    if json_response_words['meta']['result_count'] == 0:
+        #json_response = json_response_tags
+        print("No results were found...")
+        return
+    if json_response_tags['meta']['result_count'] == 0:
+        json_response = json_response
+    if json_response_words['meta']['result_count'] == 0 and json_response_tags['meta']['result_count'] == 0:
+        print("No results were found...")
+        return
+
+    
     #start collecting 10 tweets from the people with the most followers
     most_followers = []
-    for user in json_response["includes"]["users"]:
+    #for user in json_response_words["includes"]["users"]:
+    #    most_followers.append((user["id"], user["name"], user["username"], user["public_metrics"]["followers_count"]))
+    for user in json_response_words["includes"]["users"]:
         most_followers.append((user["id"], user["name"], user["username"], user["public_metrics"]["followers_count"]))
     
-    most_followers_sorted = sorted(most_followers, key=lambda tup: tup[1], reverse=True)
+
+    most_followers_sorted = sorted(most_followers, key=lambda tup: tup[3], reverse=True)
     #print(most_followers_sorted)
 
     result = []
     for user in most_followers_sorted[:10]:
-        for tweet in json_response["data"]:
+        for tweet in json_response_words["data"]:
             if tweet["author_id"] == user[0]: result.append((user[1:], tweet))
 
-    return result
-        
+    finished = False
+    i = 0
 
-#os.environ.get("BEARER_TOKEN")
+    print("\n\nFound results!")
+    while(not finished):
+        print(f"Result {i+1}: \nTweet: {result[i][1]['text']}\nUsername: {result[i][0][1]}\nFollower count: {result[i][0][2]}")
+        answer = input("\nDoes this result satisfy you? (y/n)")
+        if answer == 'y':
+            finished = True
+            print("Warning: This information is from Twitter so might be fake news.")
+        elif answer == 'n':
+            i += 1
+            if i == 10:
+                print("I could not find a satisfactory answer. My apologies...")
+                break
+            else:
+                print("Returning new result...")
+            
+        else:
+            print("I do not recognise that input, please try again...")
+
+
 
 
 
