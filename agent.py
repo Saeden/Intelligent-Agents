@@ -1,6 +1,8 @@
+from audioop import reverse
 import requests
 import os
 from owlready2 import *
+import json
 
 
 owlready2.JAVA_EXE = "C:\\Program Files (x86)\\Java\\jre1.8.0_351\\bin\\java.exe"
@@ -8,18 +10,21 @@ owlready2.reasoning.JAVA_MEMORY = 1000
 
 
 
-onto_path.append("Ontology_IA_Group8Final_TEST.owl")
+"""onto_path.append("Ontology_IA_Group8Final_TEST.owl")
 print(f"Loading ontology from: {onto_path}")
 onto = get_ontology("file://Ontology_IA_Group8Final.owl").load()
 
 print("Syncing reasoner and closing world...")
 with onto:
     sync_reasoner(infer_property_values=True)
-    close_world(onto)
+    close_world(onto)"""
     
+with open('BEARER_TOKEN.txt') as f:    
+    bearer_token = f.readline()
+
 
 def main():
-    print("\n\n---Welcome to the IA Ontological Reasoner---\n")
+    """print("\n\n---Welcome to the IA Ontological Reasoner---\n")
     print("What question would you like to ask?")
     print("1. Are soccer and kickboxing unsafe sports?")
     print("2. Is there a sport that is a riskfactor for a health condition?")
@@ -33,7 +38,7 @@ def main():
             query = input("Select a query: ")
             if (query in query_options): selected = True
             else: 
-                print("That is not one of the options, please try again")
+                print("That is not one of the options, please try again.")
         
         if not done_query:
             agent(query)
@@ -47,10 +52,9 @@ def main():
             selected = False
             done_query = False
         else:
-            print("That is not one of the options, please try again")
+            print("That is not one of the options, please try again.")"""
 
-
-
+    print(twitter_query())
     #print("\n\n")
     #query2()
 
@@ -58,8 +62,8 @@ def agent(query):
     if (query == "1"):
         check = query1()
         if not check:
-            print("No result from onto")
-            #twitter()
+            #print("No result from onto")
+            twitter_query()
 
     elif (query == "2"):
         check = query2()
@@ -70,8 +74,8 @@ def agent(query):
     elif (query == "3"):
         check = query3()
         if not check:
-            print("No result from onto")
-            #twitter()
+            twitter_query()
+
 
 def search(search_iri, search_term):
     print(f"\nQuerying if {search_term} is in the ontology:")
@@ -90,7 +94,7 @@ def search(search_iri, search_term):
     else:
         print(f"{search_term} is not in the ontology...\nQuerying Twitter for answers...")
         return search_result
-        #query_twitter(["Soccer", "Kickboxing", "Unsafe", "Sport"])
+
 
 def memberOf(instance, ont_class):
     print(f"\nChecking if {instance[0].name} is a member of {ont_class[0].name}:")
@@ -113,11 +117,6 @@ def allMembers(ont_class):
         print("There are no individuals in this class! Searching twitter instead...")
         return search
 
-
-
-    
-
-
 def query1():
     #"1. Are soccer and kickboxing unsafe sports?"
     unsafe_InO = search("*UnsafeSport", "UnsafeSport")
@@ -138,9 +137,6 @@ def query1():
     print(f"\nFinal answer: \nSoccer is unsafe is {soc_is_in} and kickboxing is unsafe is {kic_is_in}")
 
     return True
-
-
-
 
 def query2():
     #"2. Is there a sport that is a riskfactor for some health condition?"
@@ -183,30 +179,57 @@ def query2():
 
     return True
 
-    
-        
-
-
-
-    #print(onto.search(isRiskfactorFor = "*"))
-
 def query3():
     print("Not implemented yet...")
 
-def twitter(query=""):
+
+
+#Parts of the code after this point were inspired by or copied from:
+#https://github.com/twitterdev/Twitter-API-v2-sample-code/blob/main/Full-Archive-Search/full-archive-search.py
+#https://github.com/twitterdev/Twitter-API-v2-sample-code/blob/main/Recent-Search/recent_search.py
+
+def twitter_query(query: str = ""):
+    print("The ontology could not provide an answer, querying Twitter for more up to date info...")
+
+    search_url = "https://api.twitter.com/2/tweets/search/recent"
+    #search_url = "https://api.twitter.com/2/tweets/search/all"
+
     # Optional params: start_time,end_time,since_id,until_id,max_results,next_token,
     # expansions,tweet.fields,media.fields,poll.fields,place.fields,user.fields
-    query_params = {'query': '(from:twitterdev -is:retweet) OR #twitterdev','tweet.fields': 'author_id'}
-    search_url = "https://api.twitter.com/2/tweets/search/recent"    
-    requests.get()
+    query_params = {'query': '#sport OR #competition OR #eating','tweet.fields': 'author_id', 'max_results': 10, 'expansions': 'author_id', 'user.fields': 'public_metrics'}
+
+
+    
+    json_response = connect_to_endpoint(search_url, query_params)
+    #print(json.dumps(json_response, indent=4, sort_keys=True))
+
+    #start collecting 10 tweets from the people with the most followers
+    most_followers = []
+    for user in json_response["includes"]["users"]:
+        most_followers.append((user["id"], user["name"], user["username"], user["public_metrics"]["followers_count"]))
+    
+    most_followers_sorted = sorted(most_followers, key=lambda tup: tup[1], reverse=True)
+    #print(most_followers_sorted)
+
+    result = []
+    for user in most_followers_sorted[:10]:
+        for tweet in json_response["data"]:
+            if tweet["author_id"] == user[0]: result.append((user[1:], tweet))
+
+    return result
+        
+
+#os.environ.get("BEARER_TOKEN")
+
+
 
 def bearer_oauth(r):
     """
     Method required by bearer token authentication.
     """
-    bearer_token = os.environ.get("BEARER_TOKEN")
+
     r.headers["Authorization"] = f"Bearer {bearer_token}"
-    r.headers["User-Agent"] = "v2RecentSearchPython"
+    r.headers["User-Agent"] = "IA_Ontology_Reasoner"
     return r
 
 def connect_to_endpoint(url, params):
