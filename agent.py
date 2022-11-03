@@ -5,43 +5,49 @@ from owlready2 import *
 import json
 
 
-owlready2.JAVA_EXE = "C:\\Program Files (x86)\\Java\\jre1.8.0_351\\bin\\java.exe"
+#owlready2.JAVA_EXE = "C:\\Program Files (x86)\\Java\\jre1.8.0_351\\bin\\java.exe"
 owlready2.reasoning.JAVA_MEMORY = 1000
 
 
 
-"""onto_path.append("Ontology_IA_Group8Final_TEST.owl")
+onto_path.append("Ontology_IA_Group8Final.owl")
 print(f"Loading ontology from: {onto_path}")
 onto = get_ontology("file://Ontology_IA_Group8Final.owl").load()
 
 print("Syncing reasoner and closing world...")
 with onto:
     sync_reasoner(infer_property_values=True)
-    close_world(onto)"""
+    close_world(onto)
     
 with open('BEARER_TOKEN.txt') as f:    
     bearer_token = f.readline()
 
 
 def main():
-    """print("\n\n---Welcome to the IA Ontological Reasoner---\n")
+    print("\n\n---Welcome to the IA Ontological Reasoner---\n")
     print("What question would you like to ask?")
-    print("1. Are soccer and kickboxing unsafe sports?")
-    print("2. Is there a sport that is a riskfactor for a health condition?")
+    #print("1. Are soccer and kickboxing unsafe sports?")
+    #print("2. Is there a sport that is a riskfactor for a health condition?")
 
     selected = False
-    query_options = ["1", "2", "3"]
+    keywords = [["unsafe"], ["risk", "riskfactor"], ["patents", "monopoly", "monopolized"]]
+    #query_options = ["1", "2", "3"]
     finished = False
     done_query = False
+    query_type = ''
     while (finished == False):
         while (selected == False):
-            query = input("Select a query: ")
-            if (query in query_options): selected = True
-            else: 
-                print("That is not one of the options, please try again.")
+            query = input("Question: ")
+            for word in query.split(" "):
+                for query_options in range(0, len(keywords)):
+                    if word in keywords[query_options]:
+                        query_type = str(query_options+1)
+                        selected = True
+            if query_type == '':
+                print("Sorry but I don't recognise that question, please try again.")
         
         if not done_query:
-            agent(query)
+            agent(query_type)
             done_query = True
 
         yes_no = input("\n\nDo you want to ask another question? (y/n):")
@@ -52,7 +58,7 @@ def main():
             selected = False
             done_query = False
         else:
-            print("That is not one of the options, please try again.")"""
+            print("That is not one of the options, please try again.")
 
     print(twitter_query())
     #print("\n\n")
